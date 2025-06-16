@@ -1,12 +1,20 @@
-# First stage: build
-FROM maven:3.8.5-openjdk-17 AS build
-WORKDIR /app
-COPY . .
-RUN mvn clean install -DskipTests
+# Use Maven with JDK 21
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 
-# Second stage: run
-FROM openjdk:17-jdk-slim
 WORKDIR /app
+
+# Copy all files
+COPY . .
+
+# Package the application, skip tests
+RUN ./mvnw clean install -DskipTests
+
+# Optional: use a smaller JDK 21 image for running the app
+FROM eclipse-temurin:21-jdk
+
+WORKDIR /app
+
 COPY --from=build /app/target/Stayhub-0.0.1-SNAPSHOT.jar app.jar
-EXPOSE 8080
+
+# Run the Spring Boot application
 ENTRYPOINT ["java", "-jar", "app.jar"]
