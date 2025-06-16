@@ -1,5 +1,7 @@
 package com.stayhub.Stayhub.controller;
 
+
+
 import com.stayhub.Stayhub.dto.Response;
 import com.stayhub.Stayhub.service.interfac.IBookingService;
 import com.stayhub.Stayhub.service.interfac.IRoomService;
@@ -72,15 +74,36 @@ public class RoomController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOutDate,
             @RequestParam(required = false) String roomType
     ) {
+        Response response = new Response();
+
+        // 1. Required field check
         if (checkInDate == null || roomType == null || roomType.isBlank() || checkOutDate == null) {
-            Response response = new Response();
             response.setStatusCode(400);
-            response.setMessage("Please provide values for all fields(checkInDate, roomType,checkOutDate)");
+            response.setMessage("Please provide values for all fields (checkInDate, roomType, checkOutDate)");
             return ResponseEntity.status(response.getStatusCode()).body(response);
         }
-        Response response = roomService.getAvailableRoomsByDataAndType(checkInDate, checkOutDate, roomType);
+
+        LocalDate today = LocalDate.now();
+
+        // 2. Prevent past dates
+        if (checkInDate.isBefore(today) || checkOutDate.isBefore(today)) {
+            response.setStatusCode(400);
+            response.setMessage("Check-in and Check-out dates cannot be in the past.");
+            return ResponseEntity.status(response.getStatusCode()).body(response);
+        }
+
+        // 3. Check that check-in is not after check-out
+        if (checkInDate.isAfter(checkOutDate)) {
+            response.setStatusCode(400);
+            response.setMessage("Check-in date must be before or equal to check-out date.");
+            return ResponseEntity.status(response.getStatusCode()).body(response);
+        }
+
+        // ✅ All good, proceed
+        response = roomService.getAvailableRoomsByDataAndType(checkInDate, checkOutDate, roomType);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
 
     @PutMapping("/update/{roomId}")
     @PreAuthorize("hasAuthority('ADMIN')")

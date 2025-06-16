@@ -34,7 +34,8 @@ public class RoomService implements IRoomService {
         Response response = new Response();
 
         try {
-            String imageUrl = awsS3Service.saveImageToS3(photo);
+            String imageUrl = awsS3Service.saveImageToS3Async(photo).get();
+
             Room room = new Room();
             room.setRoomPhotoUrl(imageUrl);
             room.setRoomType(roomType);
@@ -103,9 +104,12 @@ public class RoomService implements IRoomService {
         try {
             String imageUrl = null;
             if (photo != null && !photo.isEmpty()) {
-                imageUrl = awsS3Service.saveImageToS3(photo);
+                imageUrl = awsS3Service.saveImageToS3Async(photo).get(); // wait for async upload to finish
             }
-            Room room = roomRepository.findById(roomId).orElseThrow(() -> new OurException("Room Not Found"));
+
+            Room room = roomRepository.findById(roomId)
+                    .orElseThrow(() -> new OurException("Room Not Found"));
+
             if (roomType != null) room.setRoomType(roomType);
             if (roomPrice != null) room.setRoomPrice(roomPrice);
             if (description != null) room.setRoomDescription(description);
@@ -123,10 +127,12 @@ public class RoomService implements IRoomService {
             response.setMessage(e.getMessage());
         } catch (Exception e) {
             response.setStatusCode(500);
-            response.setMessage("Error saving a room " + e.getMessage());
+            response.setMessage("Error updating room: " + e.getMessage());
         }
+
         return response;
     }
+
 
     @Override
     public Response getRoomById(Long roomId) {

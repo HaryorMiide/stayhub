@@ -9,15 +9,16 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.stayhub.Stayhub.exception.OurException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 public class AwsS3Service {
 
-    //    private final String bucketName = "stayhub-hotel-image";
     private final String bucketName = "stayhub-hotel-image";
 
     @Value("${aws.s3.access.key}")
@@ -26,11 +27,10 @@ public class AwsS3Service {
     @Value("${aws.s3.secret.key}")
     private String awsS3SecretKey;
 
-    public String saveImageToS3(MultipartFile photo) {
-        String s3LocationImage = null;
-
+    // ⚡ Asynchronous Upload
+    @Async
+    public CompletableFuture<String> saveImageToS3Async(MultipartFile photo) {
         try {
-
             String s3Filename = photo.getOriginalFilename();
 
             BasicAWSCredentials awsCredentials = new BasicAWSCredentials(awsS3AccessKey, awsS3SecretKey);
@@ -46,11 +46,13 @@ public class AwsS3Service {
 
             PutObjectRequest putObjectRequest = new PutObjectRequest(bucketName, s3Filename, inputStream, metadata);
             s3Client.putObject(putObjectRequest);
-            return "https://" + bucketName + ".s3.amazonaws.com/" + s3Filename;
+
+            String imageUrl = "https://" + bucketName + ".s3.amazonaws.com/" + s3Filename;
+
+            return CompletableFuture.completedFuture(imageUrl);
 
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new OurException("Unable to upload image to s3 bucket" + e.getMessage());
+            throw new OurException("Unable to upload image to s3 bucket: " + e.getMessage());
         }
     }
 }
